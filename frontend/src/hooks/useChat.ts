@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { message as antdMessage } from 'antd';
 import { consultingApi } from '@/services/api';
+import { checkInputSafety } from '@/services/safety';
 import type {
   DisplayMessage,
   CaseInfo,
@@ -150,6 +152,16 @@ export function useChat() {
     async (userInput: string) => {
       const trimmed = userInput.trim();
       if (!trimmed || isLoading) return;
+
+      const safety = checkInputSafety(trimmed);
+      if (!safety.safe) {
+        antdMessage.warning({
+          content: safety.reason || '输入内容存在安全风险，请规范表述。',
+          duration: 4,
+        });
+        console.warn('[前端安全拦截]', safety.matched);
+        return;
+      }
 
       addUserMessage(trimmed);
       setIsLoading(true);
