@@ -9,6 +9,8 @@ import type {
   ChatMessage,
   GuideQuestion,
   MessageRole,
+  CaseKeyFactors,
+  SimilarCase,
 } from '@/types';
 
 const STORAGE_KEY = 'legal_ai_session';
@@ -20,6 +22,8 @@ export interface ChatState {
   isLoading: boolean;
   isCompleted: boolean;
   currentGuide: GuideQuestion | null;
+  keyFactors: CaseKeyFactors | null;
+  similarCases: SimilarCase[];
 }
 
 function loadStoredSession(): Partial<ChatState> | null {
@@ -39,6 +43,8 @@ function saveSession(state: ChatState) {
       JSON.stringify({
         sessionId: state.sessionId,
         caseInfo: state.caseInfo,
+        keyFactors: state.keyFactors,
+        similarCases: state.similarCases,
       }),
     );
   } catch {}
@@ -78,6 +84,12 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [currentGuide, setCurrentGuide] = useState<GuideQuestion | null>(null);
+  const [keyFactors, setKeyFactors] = useState<CaseKeyFactors | null>(
+    stored?.keyFactors || null,
+  );
+  const [similarCases, setSimilarCases] = useState<SimilarCase[]>(
+    stored?.similarCases || [],
+  );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -86,8 +98,17 @@ export function useChat() {
   }, [messages, isLoading]);
 
   useEffect(() => {
-    saveSession({ sessionId, messages, caseInfo, isLoading, isCompleted, currentGuide });
-  }, [sessionId, caseInfo, isCompleted, currentGuide]);
+    saveSession({
+      sessionId,
+      messages,
+      caseInfo,
+      isLoading,
+      isCompleted,
+      currentGuide,
+      keyFactors,
+      similarCases,
+    });
+  }, [sessionId, caseInfo, isCompleted, currentGuide, keyFactors, similarCases]);
 
   const toHistoryMessages = (list: DisplayMessage[]): ChatMessage[] =>
     list
@@ -181,6 +202,12 @@ export function useChat() {
         setCaseInfo(response.case_info);
         setIsCompleted(response.is_completed);
         setCurrentGuide(response.guide_next || null);
+        if (response.key_factors) {
+          setKeyFactors(response.key_factors);
+        }
+        if (response.similar_cases && response.similar_cases.length > 0) {
+          setSimilarCases(response.similar_cases);
+        }
 
         updateLastAssistant({
           content: response.answer,
@@ -224,6 +251,8 @@ export function useChat() {
     isLoading,
     isCompleted,
     currentGuide,
+    keyFactors,
+    similarCases,
     sendMessage,
     resetChat,
     messagesEndRef,

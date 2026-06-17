@@ -1,4 +1,5 @@
-from typing import Tuple, List
+import asyncio
+from typing import Tuple, List, Optional
 from app.schemas.chat import (
     ChatRequest,
     ChatResponse,
@@ -7,11 +8,15 @@ from app.schemas.chat import (
     GuideQuestion,
     Message,
     MessageRole,
+    CaseKeyFactors,
+    SimilarCase,
 )
 from app.services.dialog_manager import dialog_manager
 from app.services.prompt_builder import prompt_builder
 from app.services.llm_service import llm_service
 from app.services.safety_guard import safety_guard_service
+from app.services.key_factor_extractor import key_factor_extractor
+from app.services.similar_case_service import similar_case_service
 from app.rag.milvus_store import milvus_service
 from app.core.logging import logger
 
@@ -41,6 +46,24 @@ class LegalConsultingService:
                 chapter_str = f" {law.chapter}" if law.chapter else ""
                 refs.append(f"《{law.title}》{chapter_str}{law.article}")
         return refs
+
+    @staticmethod
+    def _extract_key_factors_and_cases(
+        case_info: CaseInfo,
+        user_message: str,
+    ) -> Tuple[Optional[CaseKeyFactors], List[SimilarCase]]:
+        try:
+            factors = key_factor_extractor.extract(case_info, user_message)
+            query_text = prompt_builder.build_case_summary_query(case_info, user_message)
+            cases = similar_case_service.search_similar_cases(factors, query_text)
+            logger.info(
+                f"要素提取完成: {factors.model_dump(exclude_none=True)} | "
+                f"匹配判例 {len(cases)} 条"
+            )
+            return factors, cases
+        except Exception as e:
+            logger.error(f"要素提取/判例检索失败: {e}")
+            return None, []
 
     @classmethod
     async def process_chat(cls, request: ChatRequest) -> ChatResponse:
@@ -116,6 +139,21 @@ class LegalConsultingService:
 
         references = cls._extract_references(retrieved_laws)
 
+        key_factors: Optional[CaseKeyFactors] = None
+        similar_cases: List[SimilarCase] = []
+        should_extract = is_completed and output_safety.is_safe
+        if should_extract or (case_info.details and case_info.dispute_type):
+            try:
+                loop = asyncio.get_event_loop()
+                key_factors, similar_cases = await loop.run_in_executor(
+                    None,
+                    cls._extract_key_factors_and_cases,
+                    case_info,
+                    user_message,
+                )
+            except Exception as e:
+                logger.warning(f"要素提取/判例检索异常（不影响主流程）: {e}")
+
         response = ChatResponse(
             session_id=session_id,
             answer=answer,
@@ -124,6 +162,8 @@ class LegalConsultingService:
             retrieved_laws=retrieved_laws,
             is_completed=is_completed and output_safety.is_safe,
             references=references,
+            key_factors=key_factors,
+            similar_cases=similar_cases,
         )
 
         logger.info(
@@ -132,6 +172,8 @@ class LegalConsultingService:
             f"输出安全: {output_safety.is_safe}, "
             f"步骤: {next_question.step.value if next_question else '完成'}, "
             f"检索法条: {len(retrieved_laws)}条, "
+            f"要素提取: {key_factors is not None}, "
+            f"相似判例: {len(similar_cases)}条, "
             f"回答长度: {len(answer)}字符"
         )
         return response

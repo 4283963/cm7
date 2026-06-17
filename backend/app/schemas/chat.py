@@ -74,6 +74,48 @@ class RetrievedLaw(BaseModel):
     law_source: Optional[str] = None
 
 
+class CaseKeyFactors(BaseModel):
+    dispute_type: Optional[str] = Field(None, description="纠纷类型")
+    amount_involved: Optional[str] = Field(None, description="涉案金额/金额区间，如 5万-10万")
+    has_written_evidence: Optional[str] = Field(None, description="是否有书面证据：有/无/部分")
+    limitation_period: Optional[str] = Field(None, description="诉讼时效：已过/未过/待查")
+    party_relationship: Optional[str] = Field(None, description="当事人关系")
+    location: Optional[str] = Field(None, description="事件发生地")
+    extra_factors: Dict[str, Any] = Field(default_factory=dict, description="其他要素")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "dispute_type": "民间借贷",
+                "amount_involved": "5万-10万",
+                "has_written_evidence": "有（借条+转账记录）",
+                "limitation_period": "未过",
+            }
+        }
+
+
+class SimilarCase(BaseModel):
+    id: Optional[int] = None
+    case_number: str
+    title: str
+    dispute_type: str
+    court_name: Optional[str] = None
+    province: Optional[str] = None
+    city: Optional[str] = None
+    trial_date: Optional[str] = None
+    case_level: Optional[str] = None
+    facts: Optional[str] = None
+    judgment_result: Optional[str] = None
+    applicable_laws: Optional[List[str]] = None
+    key_factors: Optional[Dict[str, Any]] = None
+    amount_involved: Optional[str] = None
+    has_written_evidence: Optional[str] = None
+    limitation_period: Optional[str] = None
+    tags: Optional[List[str]] = None
+    summary: Optional[str] = None
+    similarity_score: float = Field(0.0, description="相似度得分 0-1")
+
+
 class ChatResponse(BaseModel):
     session_id: str
     answer: str
@@ -82,6 +124,8 @@ class ChatResponse(BaseModel):
     retrieved_laws: List[RetrievedLaw] = Field(default_factory=list)
     is_completed: bool = False
     references: List[str] = Field(default_factory=list)
+    key_factors: Optional[CaseKeyFactors] = Field(None, description="AI 提炼的案情核心要素三元组")
+    similar_cases: List[SimilarCase] = Field(default_factory=list, description="相似判例列表")
 
 
 class LawInsertRequest(BaseModel):

@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.core.logging import logger
 from app.routers import consulting, laws
 from app.rag.milvus_store import milvus_service
+from app.models.database import init_db
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -35,6 +36,11 @@ async def startup_event():
         logger.info(f"Milvus 状态: {stats}")
     except Exception as e:
         logger.warning(f"启动时 Milvus 初始化失败（不影响启动）: {e}")
+
+    try:
+        init_db()
+    except Exception as e:
+        logger.warning(f"启动时 MySQL 初始化失败（不影响启动，请检查 MySQL 是否启动）: {e}")
 
 
 @app.get("/")

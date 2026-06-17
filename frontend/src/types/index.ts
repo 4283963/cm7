@@ -55,6 +55,38 @@ export interface RetrievedLaw {
   law_source?: string | null;
 }
 
+export interface CaseKeyFactors {
+  dispute_type?: string | null;
+  amount_involved?: string | null;
+  has_written_evidence?: string | null;
+  limitation_period?: string | null;
+  party_relationship?: string | null;
+  location?: string | null;
+  extra_factors?: Record<string, any>;
+}
+
+export interface SimilarCase {
+  id?: number | null;
+  case_number: string;
+  title: string;
+  dispute_type: string;
+  court_name?: string | null;
+  province?: string | null;
+  city?: string | null;
+  trial_date?: string | null;
+  case_level?: string | null;
+  facts?: string | null;
+  judgment_result?: string | null;
+  applicable_laws?: string[] | null;
+  key_factors?: Record<string, any> | null;
+  amount_involved?: string | null;
+  has_written_evidence?: string | null;
+  limitation_period?: string | null;
+  tags?: string[] | null;
+  summary?: string | null;
+  similarity_score: number;
+}
+
 export interface ChatRequest {
   session_id: string;
   user_message: string;
@@ -70,6 +102,8 @@ export interface ChatResponse {
   retrieved_laws: RetrievedLaw[];
   is_completed: boolean;
   references: string[];
+  key_factors?: CaseKeyFactors | null;
+  similar_cases: SimilarCase[];
 }
 
 export interface DisplayMessage {

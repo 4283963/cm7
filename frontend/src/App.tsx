@@ -4,6 +4,8 @@ import { Header } from '@/components/Header';
 import { CaseInfoPanel } from '@/components/CaseInfoPanel';
 import { MessageList } from '@/components/MessageList';
 import { ChatInput } from '@/components/ChatInput';
+import { KeyFactorsCard } from '@/components/KeyFactorsCard';
+import { SimilarCasesPanel, CasesEmpty } from '@/components/SimilarCasesPanel';
 import { Alert } from 'antd';
 import { Info } from 'lucide-react';
 
@@ -14,6 +16,8 @@ const App: React.FC = () => {
     isLoading,
     isCompleted,
     currentGuide,
+    keyFactors,
+    similarCases,
     sendMessage,
     resetChat,
     messagesEndRef,
@@ -48,7 +52,7 @@ const App: React.FC = () => {
             <MessageList
               messages={messages}
               onSelectOption={sendMessage}
-              ref={messagesEndRef}
+              messagesEndRef={messagesEndRef}
             />
             <ChatInput
               onSend={sendMessage}
@@ -57,8 +61,14 @@ const App: React.FC = () => {
             />
           </div>
 
-          <aside className="hidden lg:block w-[360px] flex-shrink-0 overflow-y-auto scrollbar-thin -mr-2 pr-2">
+          <aside className="hidden lg:block w-[360px] flex-shrink-0 overflow-y-auto scrollbar-thin -mr-2 pr-2 space-y-4">
             <CaseInfoPanel caseInfo={caseInfo} currentStep={currentStep} />
+            <KeyFactorsCard factors={keyFactors} />
+            {similarCases.length > 0 ? (
+              <SimilarCasesPanel cases={similarCases} />
+            ) : isCompleted ? (
+              <CasesEmpty />
+            ) : null}
           </aside>
         </div>
       </main>
